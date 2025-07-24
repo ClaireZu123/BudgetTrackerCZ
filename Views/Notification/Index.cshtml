@@ -1,0 +1,236 @@
+@model IEnumerable<BudgetTrackerCZ.Models.Notification>
+
+@{
+    ViewData["PageTitle"] = "Notifications";
+    ViewData["PageIcon"] = "fa-bell";
+}
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <h4 class="mb-0 me-3">
+                <i class="fa-solid fa-bell me-2"></i>Notifications
+            </h4>
+            @if (ViewBag.UnreadCount > 0)
+            {
+                <span class="badge bg-danger">@ViewBag.UnreadCount unread</span>
+            }
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="markAllAsRead()">
+                <i class="fa-solid fa-check-double me-1"></i>Mark All Read
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success" onclick="generateNotifications()">
+                <i class="fa-solid fa-refresh me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="widget">
+                <div class="widget-content p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach (var notification in Model)
+                        {
+                            <div class="list-group-item @(!notification.IsRead ? "bg-light border-start border-primary border-3" : "") notification-item" 
+                                 data-notification-id="@notification.NotificationId">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="fa-solid @notification.TypeIcon fa-lg @notification.TypeColor"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <h6 class="mb-0 @(!notification.IsRead ? "fw-bold" : "")">
+                                                @notification.Title
+                                                @if (notification.IsNew)
+                                                {
+                                                    <span class="badge bg-success ms-2">New</span>
+                                                }
+                                            </h6>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge @notification.PriorityBadgeClass me-2">@notification.Priority</span>
+                                                <small class="text-muted">@notification.FormattedCreatedDate</small>
+                                            </div>
+                                        </div>
+                                        <p class="mb-2 text-muted">@notification.Message</p>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                @if (!string.IsNullOrEmpty(notification.ActionUrl))
+                                                {
+                                                    <a href="@notification.ActionUrl" class="btn btn-sm btn-outline-primary me-2" 
+                                                       onclick="markAsRead(@notification.NotificationId)">
+                                                        <i class="fa-solid fa-external-link-alt me-1"></i>@(notification.ActionText ?? "View")
+                                                    </a>
+                                                }
+                                            </div>
+                                            <div class="notification-actions">
+                                                @if (!notification.IsRead)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-success me-1" 
+                                                            onclick="markAsRead(@notification.NotificationId)" title="Mark as read">
+                                                        <i class="fa-solid fa-check"></i>
+                                                    </button>
+                                                }
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="dismissNotification(@notification.NotificationId)" title="Dismiss">
+                                                    <i class="fa-solid fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="widget text-center py-5">
+                <i class="fa-solid fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No notifications</h5>
+                <p class="text-muted">You're all caught up! No new notifications to display.</p>
+                <button type="button" class="btn btn-outline-primary" onclick="generateNotifications()">
+                    <i class="fa-solid fa-refresh me-1"></i>Check for new notifications
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    async function markAsRead(notificationId) {
+        try {
+            const response = await fetch(`/Notification/MarkAsRead/${notificationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            });
+            
+            if (response.ok) {
+                const notificationElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (notificationElement) {
+                    notificationElement.classList.remove('bg-light', 'border-start', 'border-primary', 'border-3');
+                    const titleElement = notificationElement.querySelector('h6');
+                    if (titleElement) {
+                        titleElement.classList.remove('fw-bold');
+                    }
+                    const actionButtons = notificationElement.querySelector('.notification-actions');
+                    const markReadBtn = actionButtons.querySelector('.btn-outline-success');
+                    if (markReadBtn) {
+                        markReadBtn.remove();
+                    }
+                }
+                updateUnreadCount();
+            }
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    }
+
+    async function markAllAsRead() {
+        try {
+            const response = await fetch('/Notification/MarkAllAsRead', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
+    }
+
+    async function dismissNotification(notificationId) {
+        if (confirm('Are you sure you want to dismiss this notification?')) {
+            try {
+                const response = await fetch(`/Notification/Dismiss/${notificationId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                });
+                
+                if (response.ok) {
+                    const notificationElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                    if (notificationElement) {
+                        notificationElement.remove();
+                    }
+                    updateUnreadCount();
+                }
+            } catch (error) {
+                console.error('Error dismissing notification:', error);
+            }
+        }
+    }
+
+    async function generateNotifications() {
+        try {
+            const response = await fetch('/Notification/GenerateSystemNotifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error generating notifications:', error);
+        }
+    }
+
+    function updateUnreadCount() {
+        // This could be enhanced to update the count in real-time
+        const unreadElements = document.querySelectorAll('.notification-item.bg-light').length;
+        const badge = document.querySelector('.badge.bg-danger');
+        if (badge) {
+            if (unreadElements === 0) {
+                badge.remove();
+            } else {
+                badge.textContent = `${unreadElements} unread`;
+            }
+        }
+    }
+</script>
+
+@{
+    Html.AntiForgeryToken();
+}
+
+<style>
+    .notification-item:hover {
+        background-color: rgba(0, 123, 255, 0.05) !important;
+    }
+    
+    .notification-actions {
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
+    }
+    
+    .notification-item:hover .notification-actions {
+        opacity: 1;
+    }
+</style>

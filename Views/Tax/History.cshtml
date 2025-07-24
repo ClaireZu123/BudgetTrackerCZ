@@ -1,0 +1,191 @@
+@{
+    ViewData["PageTitle"] = "Tax History";
+    ViewData["PageIcon"] = "fa-history";
+    var taxYears = (List<int>)ViewBag.TaxYears;
+    var historicalData = (Dictionary<int, Dictionary<string, decimal>>)ViewBag.HistoricalData;
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="widget">
+            <div class="widget-title">
+                <h5>Tax Year Comparison</h5>
+            </div>
+            <div class="widget-content">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Tax Year</th>
+                                <th>Total Income</th>
+                                <th>Total Expenses</th>
+                                <th>Interest Income</th>
+                                <th>Capital Gains</th>
+                                <th>Net Position</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var year in taxYears)
+                            {
+                                var data = historicalData[year];
+                                var netPosition = data["TotalIncome"] - data["TotalExpenses"];
+                                var isCurrentYear = year == taxYears.First();
+                                
+                                <tr class="@(isCurrentYear ? "table-primary" : "")">
+                                    <td>
+                                        <strong>@year-@(year + 1)</strong>
+                                        @if (isCurrentYear)
+                                        {
+                                            <span class="badge bg-primary ms-2">Current</span>
+                                        }
+                                    </td>
+                                    <td class="text-success">£@(data["TotalIncome"].ToString("F2"))</td>
+                                    <td class="text-danger">£@(data["TotalExpenses"].ToString("F2"))</td>
+                                    <td class="@(data["InterestIncome"] >= 1000 ? "text-warning" : "")">
+                                        £@(data["InterestIncome"].ToString("F2"))
+                                        @if (data["InterestIncome"] >= 1000)
+                                        {
+                                            <i class="fa-solid fa-exclamation-triangle ms-1 text-warning" title="Exceeded £1,000 allowance"></i>
+                                        }
+                                    </td>
+                                    <td class="@(data["CapitalGains"] >= 3000 ? "text-warning" : "")">
+                                        £@(data["CapitalGains"].ToString("F2"))
+                                        @if (data["CapitalGains"] >= 3000)
+                                        {
+                                            <i class="fa-solid fa-exclamation-triangle ms-1 text-warning" title="Exceeded £3000 allowance"></i>
+                                        }
+                                    </td>
+                                    <td class="@(netPosition >= 0 ? "text-success" : "text-danger")">
+                                        @(netPosition >= 0 ? "+" : "")£@(netPosition.ToString("F2"))
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="viewTaxYearDetails(@year)">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="widget chart">
+            <div class="p-4">
+                <h5 class="fw-bold">Income vs Expenses Trend</h5>
+            </div>
+            <ejs-chart id="income-expense-chart" background="#1a222b"
+                       palettes=@(new string[]{"#54ffa9","#ff6b6b"})>
+                <e-chart-primaryxaxis valueType="Category">
+                    <e-majorgridlines width="0"></e-majorgridlines>
+                    <e-majorticklines width="0"></e-majorticklines>
+                </e-chart-primaryxaxis>
+                <e-chart-primaryyaxis>
+                    <e-majorgridlines width="1" color="#32414d" dashArray="3,5"></e-majorgridlines>
+                    <e-majorticklines width="0"></e-majorticklines>
+                    <e-linestyle width="0"></e-linestyle>
+                </e-chart-primaryyaxis>
+                <e-chart-chartarea>
+                    <e-chartarea-border width="0"></e-chartarea-border>
+                </e-chart-chartarea>
+                <e-series-collection>
+                    <e-series dataSource="@GetIncomeExpenseData()" xName="TaxYear" width="3"
+                              yName="Income" name="Income" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Column"></e-series>
+                    <e-series dataSource="@GetIncomeExpenseData()" xName="TaxYear" width="3"
+                              yName="Expenses" name="Expenses" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Column"></e-series>
+                </e-series-collection>
+                <e-chart-legendsettings position="Top" alignment="Far" toggleVisibility="false">
+                    <e-legendsettings-textstyle color="#fff" size="1rem"></e-legendsettings-textstyle>
+                </e-chart-legendsettings>
+                <e-chart-tooltipsettings enable shared></e-chart-tooltipsettings>
+            </ejs-chart>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="widget chart">
+            <div class="p-4">
+                <h5 class="fw-bold">Tax Allowances Usage</h5>
+            </div>
+            <ejs-chart id="allowances-chart" background="#1a222b"
+                       palettes=@(new string[]{"#ffd93d","#6bcf7f"})>
+                <e-chart-primaryxaxis valueType="Category">
+                    <e-majorgridlines width="0"></e-majorgridlines>
+                    <e-majorticklines width="0"></e-majorticklines>
+                </e-chart-primaryxaxis>
+                <e-chart-primaryyaxis>
+                    <e-majorgridlines width="1" color="#32414d" dashArray="3,5"></e-majorgridlines>
+                    <e-majorticklines width="0"></e-majorticklines>
+                    <e-linestyle width="0"></e-linestyle>
+                </e-chart-primaryyaxis>
+                <e-chart-chartarea>
+                    <e-chartarea-border width="0"></e-chartarea-border>
+                </e-chart-chartarea>
+                <e-series-collection>
+                    <e-series dataSource="@GetAllowancesData()" xName="TaxYear" width="3"
+                              yName="InterestIncome" name="Interest Income" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Line"></e-series>
+                    <e-series dataSource="@GetAllowancesData()" xName="TaxYear" width="3"
+                              yName="CapitalGains" name="Capital Gains" type="@Syncfusion.EJ2.Charts.ChartSeriesType.Line"></e-series>
+                </e-series-collection>
+                <e-chart-legendsettings position="Top" alignment="Far" toggleVisibility="false">
+                    <e-legendsettings-textstyle color="#fff" size="1rem"></e-legendsettings-textstyle>
+                </e-chart-legendsettings>
+                <e-chart-tooltipsettings enable shared></e-chart-tooltipsettings>
+            </ejs-chart>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private object GetIncomeExpenseData()
+    {
+        var data = new List<object>();
+        var taxYears = (List<int>)ViewBag.TaxYears;
+        var historicalData = (Dictionary<int, Dictionary<string, decimal>>)ViewBag.HistoricalData;
+        
+        foreach (var year in taxYears.OrderBy(y => y))
+        {
+            var yearData = historicalData[year];
+            data.Add(new
+            {
+                TaxYear = $"{year}-{year + 1}",
+                Income = (double)yearData["TotalIncome"],
+                Expenses = (double)yearData["TotalExpenses"]
+            });
+        }
+        return data;
+    }
+    
+    private object GetAllowancesData()
+    {
+        var data = new List<object>();
+        var taxYears = (List<int>)ViewBag.TaxYears;
+        var historicalData = (Dictionary<int, Dictionary<string, decimal>>)ViewBag.HistoricalData;
+        
+        foreach (var year in taxYears.OrderBy(y => y))
+        {
+            var yearData = historicalData[year];
+            data.Add(new
+            {
+                TaxYear = $"{year}-{year + 1}",
+                InterestIncome = (double)yearData["InterestIncome"],
+                CapitalGains = (double)yearData["CapitalGains"]
+            });
+        }
+        return data;
+    }
+}
+
+<script>
+    function viewTaxYearDetails(taxYear) {
+        // Implementation for viewing detailed tax year information
+        alert(`Tax year ${taxYear}-${taxYear + 1} details would be shown here`);
+    }
+</script>

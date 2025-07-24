@@ -1,0 +1,38 @@
+﻿@model BudgetTrackerCZ.Models.FinancialTarget
+
+@{
+    ViewData["Title"] = "Create / Edit Target";
+}
+
+<h2>@(Model.Id == 0 ? "Create" : "Edit") Financial Target</h2>
+
+<form asp-action="AddOrEdit">
+    <div class="mb-3">
+        <label asp-for="Month" class="form-label"></label>
+        <input asp-for="Month" class="form-control" type="month" />
+        <span asp-validation-for="Month" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Type" class="form-label"></label>
+        <select asp-for="Type" class="form-select">
+            <option>Expense</option>
+            <option>Income</option>
+        </select>
+        <span asp-validation-for="Type" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="TargetAmount" class="form-label"></label>
+        <input asp-for="TargetAmount" class="form-control" />
+        <span asp-validation-for="TargetAmount" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="CategoryId" class="form-label"></label>
+        <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(ViewBag.Categories, "CategoryId", "Title"))"></select>
+        <span asp-validation-for="CategoryId" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-success">Submit</button>
+</form>

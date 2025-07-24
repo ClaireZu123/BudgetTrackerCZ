@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BudgetTrackerCZ</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Syncfusion ASP.NET Core controls styles -->
+    <!--<link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/29.1.33/material.css" />-->
+    <link id="syncfusion-theme" href="https://cdn.syncfusion.com/ej2/20.1.55/bootstrap5-dark.css" rel="stylesheet" />
+    <link id="app-theme" rel="stylesheet" href="/css/site.css" />
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Syncfusion ASP.NET Core controls scripts -->
+    <script src="https://cdn.syncfusion.com/ej2/29.1.33/dist/ej2.min.js"></script>
+</head>
+<body class="e-bigger" id="body">
+
+    <partial name="_SideBar" />
+
+    <div class="dock-target">
+
+        <nav class="navbar sticky-top">
+            <div class="container-fluid py-2 px-4">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <div class="d-flex align-items-center">
+                    <div class="notification-bell-container position-relative me-3">
+                        <a href="/Notification" class="text-decoration-none">
+                            <i class="fa-solid fa-bell fa-lg text-light"></i>
+                            <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                                0
+                            </span>
+                        </a>
+                    </div>
+                    <i class="fa-solid fa-message text-light me-3"></i>
+                    <img class="profile-pic" src="~/profile.jpg" />
+                </div>
+            </div>
+            <button id="themeToggle" class="btn btn-outline-light ms-3">🌙</button>
+
+        </nav>
+
+
+        <div class="main-content">
+            <div class="container mt-5">
+                <div class="row justify-content-center">
+                    <div class="@(ViewData["isDashboard"] == null?"col-md-10":"col-md-12")">
+                        <main role="main" class="pb-3">
+                            @if (ViewData["isDashboard"] == null)
+                            {
+                                <div class="row">
+                                    <div class="col-md-7">
+                                        <div class="d-flex flex-column mb-5">
+                                            <div class="d-flex mb-1">
+                                                <div class="flex-grow-1">
+                                                    <h3 class="fw-bold">@ViewData["PageTitle"]</h3>
+                                                </div>
+                                                <div>
+                                                    @if (ViewData["PageActionText"] != null)
+                                                    {
+                                                        <a class="btn btn-success" href="@ViewData["PageActionUrl"]">
+                                                            @ViewData["PageActionText"]
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <ejs-breadcrumb id="breadcrumb"
+                                                            separatorTemplate="@Html.Raw("<span class='fa-solid fa-angle-right'></span>")"></ejs-breadcrumb>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            @RenderBody()
+                        </main>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+    <ejs-scripts></ejs-scripts>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const themeToggle = document.getElementById("themeToggle");
+            const syncfusionTheme = document.getElementById("syncfusion-theme");
+            const appTheme = document.getElementById("app-theme");
+
+            const themes = {
+                light: {
+                    syncfusion: "https://cdn.syncfusion.com/ej2/20.1.55/bootstrap5.css",
+                    app: "/css/light.css",
+                    icon: "🌞",
+                    buttonClass: "btn-outline-dark"
+                },
+                dark: {
+                    syncfusion: "https://cdn.syncfusion.com/ej2/20.1.55/bootstrap5-dark.css",
+                    app: "/css/site.css",
+                    icon: "🌙",
+                    buttonClass: "btn-outline-light"
+                }
+            };
+
+            const savedTheme = localStorage.getItem("theme") || "dark";
+            applyTheme(savedTheme);
+
+            themeToggle.addEventListener("click", () => {
+                const currentTheme = localStorage.getItem("theme") || "dark";
+                const newTheme = currentTheme === "dark" ? "light" : "dark";
+                applyTheme(newTheme);
+            });
+
+            function applyTheme(theme) {
+                // Set theme class to body
+                const body = document.getElementById("body");
+                body.classList.remove("light-mode", "dark-mode");
+                body.classList.add(`${theme}-mode`);
+
+                // Syncfusion and app CSS
+                syncfusionTheme.setAttribute("href", themes[theme].syncfusion);
+                appTheme.setAttribute("href", themes[theme].app);
+                themeToggle.textContent = themes[theme].icon;
+                themeToggle.className = "btn " + themes[theme].buttonClass + " ms-3";
+                localStorage.setItem("theme", theme);
+            }
+
+            // Notification system
+            updateNotificationCount();
+            
+            // Update notification count every 30 seconds
+            setInterval(updateNotificationCount, 30000);
+            
+            async function updateNotificationCount() {
+                try {
+                    const response = await fetch('/Notification/GetUnreadCount');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const badge = document.getElementById('notification-badge');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badge.style.display = 'block';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching notification count:', error);
+                }
+            }
+
+        });
+    </script>
+
+</body>
+</html>

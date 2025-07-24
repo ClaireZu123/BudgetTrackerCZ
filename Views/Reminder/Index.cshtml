@@ -1,0 +1,116 @@
+@model IEnumerable<BudgetTrackerCZ.Models.Reminder>
+
+@{
+    ViewData["PageTitle"] = "Reminders";
+    ViewData["PageIcon"] = "fa-bell";
+}
+
+<div class="row">
+    <div class="col-md-7">
+        <ejs-grid id="reminders-grid" dataSource="@Model" gridLines="None" allowSorting="true" allowFiltering="true">
+            <e-grid-columns>
+                <e-grid-column field="Title" headerText="Title" width="200"></e-grid-column>
+                <e-grid-column field="Type" headerText="Type" width="100"></e-grid-column>
+                <e-grid-column field="Priority" headerText="Priority" width="80"></e-grid-column>
+                <e-grid-column field="FormattedDueDate" headerText="Due Date" width="120"></e-grid-column>
+                <e-grid-column field="IsCompleted" headerText="Status" width="80" template="#statusTemplate"></e-grid-column>
+                <e-grid-column headerText="Actions" width="150" template="#actionColumnTemplate"></e-grid-column>
+            </e-grid-columns>
+        </ejs-grid>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="widget h-100">
+            <div class="widget-title">
+                <h5>Reminder Summary</h5>
+            </div>
+            <div class="widget-content d-flex flex-column">
+                <div class="summary-item d-flex justify-content-between align-items-center mb-3 p-3 bg-danger-subtle rounded">
+                    <div>
+                        <i class="fa-solid fa-exclamation-triangle text-danger me-2"></i>
+                        <span class="fw-bold">Overdue</span>
+                    </div>
+                    <span class="badge bg-danger">@ViewBag.OverdueCount</span>
+                </div>
+                
+                <div class="summary-item d-flex justify-content-between align-items-center mb-3 p-3 bg-warning-subtle rounded">
+                    <div>
+                        <i class="fa-solid fa-clock text-warning me-2"></i>
+                        <span class="fw-bold">Due Soon (7 days)</span>
+                    </div>
+                    <span class="badge bg-warning">@ViewBag.DueSoonCount</span>
+                </div>
+                
+                <div class="summary-item d-flex justify-content-between align-items-center mb-3 p-3 bg-success-subtle rounded">
+                    <div>
+                        <i class="fa-solid fa-check text-success me-2"></i>
+                        <span class="fw-bold">Completed</span>
+                    </div>
+                    <span class="badge bg-success">@ViewBag.CompletedCount</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="statusTemplate" type="text/x-template">
+    ${if(IsCompleted)}
+        <span class="badge bg-success">
+            <i class="fa-solid fa-check me-1"></i>Completed
+        </span>
+    ${else}
+        ${if(IsOverdue)}
+            <span class="badge bg-danger">
+                <i class="fa-solid fa-exclamation-triangle me-1"></i>Overdue
+            </span>
+        ${else if(IsDueSoon)}
+            <span class="badge bg-warning">
+                <i class="fa-solid fa-clock me-1"></i>Due Soon
+            </span>
+        ${else}
+            <span class="badge bg-secondary">
+                <i class="fa-solid fa-calendar me-1"></i>Pending
+            </span>
+        ${/if}
+    ${/if}
+</script>
+
+<script id="actionColumnTemplate" type="text/x-template">
+    <div class="d-flex gap-1">
+        ${if(!IsCompleted)}
+            <form method="post" action="/Reminder/MarkComplete/${ReminderId}" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-success" title="Mark Complete">
+                    <i class="fa-solid fa-check"></i>
+                </button>
+            </form>
+        ${/if}
+        
+        <a class="btn btn-sm btn-outline-dark" href="/Reminder/AddOrEdit/${ReminderId}" title="Edit">
+            <i class="fa-solid fa-pen"></i>
+        </a>
+        
+        <form method="post" action="/Reminder/Delete/${ReminderId}" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                    onclick="return confirm('Are you sure you want to delete this reminder?')" title="Delete">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </form>
+    </div>
+</script>
+
+<style>
+    .summary-item {
+        border-left: 4px solid transparent;
+    }
+    .bg-danger-subtle {
+        border-left-color: var(--bs-danger) !important;
+    }
+    .bg-warning-subtle {
+        border-left-color: var(--bs-warning) !important;
+    }
+    .bg-success-subtle {
+        border-left-color: var(--bs-success) !important;
+    }
+</style>

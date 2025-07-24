@@ -1,0 +1,281 @@
+@model IEnumerable<BudgetTrackerCZ.Models.FinancialTarget>
+@using BudgetTrackerCZ.Services
+
+@{
+    ViewData["PageTitle"] = "Financial Targets";
+    ViewData["PageIcon"] = "fa-bullseye";
+    var summary = (FinancialTargetSummary)ViewBag.Summary;
+}
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center">
+            <h4 class="mb-0 me-3">Financial Targets - @ViewBag.MonthName</h4>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="previousMonth()">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="nextMonth()">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="goToCurrentMonth()">
+                    Current Month
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <a href="/FinancialTarget/AddOrEdit" class="btn btn-sm btn-success">
+                <i class="fa-solid fa-plus me-1"></i>Add Target
+            </a>
+            <a href="/FinancialTarget/Analytics" class="btn btn-sm btn-info">
+                <i class="fa-solid fa-chart-line me-1"></i>Analytics
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="widget summary">
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column justify-content-center p-4">
+                    <i class="fa-solid fa-bullseye fa-2xl text-info"></i>
+                </div>
+                <div class="d-flex flex-column m-auto py-3">
+                    <span class="lead">Total Targets</span>
+                    <h3 class="display-7 fw-bold">@summary.TotalTargets</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="widget summary">
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column justify-content-center p-4">
+                    <i class="fa-solid fa-check-circle fa-2xl text-success"></i>
+                </div>
+                <div class="d-flex flex-column m-auto py-3">
+                    <span class="lead">Completed</span>
+                    <h3 class="display-7 fw-bold text-success">@summary.CompletedTargets</h3>
+                    <small class="text-muted">@(summary.CompletionRate.ToString("F1"))% rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="widget summary">
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column justify-content-center p-4">
+                    <i class="fa-solid fa-exclamation-triangle fa-2xl text-warning"></i>
+                </div>
+                <div class="d-flex flex-column m-auto py-3">
+                    <span class="lead">Over Target</span>
+                    <h3 class="display-7 fw-bold text-danger">@summary.OverTargets</h3>
+                    <small class="text-muted">@(summary.OverTargetRate.ToString("F1"))% rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="widget summary">
+            <div class="d-flex flex-row">
+                <div class="d-flex flex-column justify-content-center p-4">
+                    <i class="fa-solid fa-chart-bar fa-2xl text-primary"></i>
+                </div>
+                <div class="d-flex flex-column m-auto py-3">
+                    <span class="lead">Avg Progress</span>
+                    <h3 class="display-7 fw-bold">@(summary.AverageProgress.ToString("F1"))%</h3>
+                    <small class="text-muted">Overall performance</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Targets List -->
+@if (Model.Any())
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="widget">
+                <div class="widget-content p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Type</th>
+                                    <th>Target Amount</th>
+                                    <th>Actual Amount</th>
+                                    <th>Progress</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var target in Model)
+                                {
+                                    <tr class="@(!target.IsActive ? "table-secondary" : "")">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="@(target.Type == "Income" ? "fa-solid fa-arrow-up text-success" : "fa-solid fa-arrow-down text-danger") me-2"></i>
+                                                <span class="@(!target.IsActive ? "text-muted" : "")">
+                                                    @(target.Category?.Title ?? "All " + target.Type)
+                                                </span>
+                                                @if (!target.IsActive)
+                                                {
+                                                    <span class="badge bg-secondary ms-2">Inactive</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(target.Type == "Income" ? "bg-success" : "bg-danger")">
+                                                @target.Type
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold">£@target.TargetAmount.ToString("F2")</td>
+                                        <td class="@target.StatusClass">£@target.ActualAmount.ToString("F2")</td>
+                                        <td>
+                                            <div class="progress mb-1" style="height: 20px;">
+                                                <div class="progress-bar @target.ProgressBarClass" 
+                                                     role="progressbar" 
+                                                     style="width: @(Math.Min(100, Math.Max(0, target.PercentageAchieved)))%"
+                                                     aria-valuenow="@target.PercentageAchieved" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    @target.PercentageAchieved.ToString("F1")%
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                Variance: £@target.VarianceAmount.ToString("F2")
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(target.IsOverTarget ? "bg-danger" : target.IsCompleted ? "bg-success" : target.IsOnTrack ? "bg-info" : "bg-warning")">
+                                                @target.StatusText
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="/FinancialTarget/Progress/@target.Id" class="btn btn-outline-info" title="View Progress">
+                                                    <i class="fa-solid fa-chart-line"></i>
+                                                </a>
+                                                <a href="/FinancialTarget/AddOrEdit/@target.Id" class="btn btn-outline-primary" title="Edit">
+                                                    <i class="fa-solid fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-@(target.IsActive ? "secondary" : "success")" 
+                                                        onclick="toggleActive(@target.Id)" title="@(target.IsActive ? "Deactivate" : "Activate")">
+                                                    <i class="fa-solid fa-@(target.IsActive ? "pause" : "play")"></i>
+                                                </button>
+                                                <form method="post" action="/FinancialTarget/Delete/@target.Id" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-outline-danger" 
+                                                            onclick="return confirm('Are you sure you want to delete this target?')" title="Delete">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="widget text-center py-5">
+                <i class="fa-solid fa-bullseye fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No financial targets for @ViewBag.MonthName</h5>
+                <p class="text-muted">Create your first financial target to start tracking your budget goals.</p>
+                <a href="/FinancialTarget/AddOrEdit" class="btn btn-primary">
+                    <i class="fa-solid fa-plus me-1"></i>Add Your First Target
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    let currentYear = @ViewBag.CurrentYear;
+    let currentMonth = @ViewBag.CurrentMonth;
+
+    function previousMonth() {
+        currentMonth--;
+        if (currentMonth < 1) {
+            currentMonth = 12;
+            currentYear--;
+        }
+        updateTargets();
+    }
+
+    function nextMonth() {
+        currentMonth++;
+        if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+        }
+        updateTargets();
+    }
+
+    function goToCurrentMonth() {
+        const now = new Date();
+        currentYear = now.getFullYear();
+        currentMonth = now.getMonth() + 1;
+        updateTargets();
+    }
+
+    function updateTargets() {
+        window.location.href = `/FinancialTarget?year=${currentYear}&month=${currentMonth}`;
+    }
+
+    async function toggleActive(targetId) {
+        try {
+            const response = await fetch(`/FinancialTarget/ToggleActive/${targetId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            });
+
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error toggling target status:', error);
+        }
+    }
+</script>
+
+@{
+    Html.AntiForgeryToken();
+}
+
+<style>
+    .progress {
+        border-radius: 10px;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .table-secondary {
+        opacity: 0.7;
+    }
+</style>

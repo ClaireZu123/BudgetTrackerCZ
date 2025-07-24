@@ -1,0 +1,108 @@
+@model BudgetTrackerCZ.Models.Reminder
+
+@{
+    ViewData["PageTitle"] = Model.ReminderId == 0 ? "Create Reminder" : "Edit Reminder";
+    ViewData["PageIcon"] = "fa-bell";
+}
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="widget">
+            <div class="widget-title">
+                <h5>@ViewData["PageTitle"]</h5>
+            </div>
+            <div class="widget-content">
+                <form asp-action="AddOrEdit">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    
+                    <input type="hidden" asp-for="ReminderId" />
+                    
+                    <ejs-textbox id="title" placeholder="Reminder Title" floatLabelType="Always" 
+                                 ejs-for="Title"></ejs-textbox>
+                    <span asp-validation-for="Title" class="text-danger fs-6"></span>
+                    
+                    <ejs-textbox id="description" placeholder="Description (Optional)" floatLabelType="Always" 
+                                 multiline="true" ejs-for="Description"></ejs-textbox>
+                    <span asp-validation-for="Description" class="text-danger fs-6"></span>
+                    
+                    <ejs-datepicker id="dueDate" placeholder="Due Date" floatLabelType="Always" 
+                                    format="dd/MM/yyyy" ejs-for="DueDate"></ejs-datepicker>
+                    <span asp-validation-for="DueDate" class="text-danger fs-6"></span>
+                    
+                    <ejs-dropdownlist id="type" placeholder="Reminder Type" floatLabelType="Always" 
+                                      dataSource="@ViewBag.ReminderTypes" ejs-for="Type"></ejs-dropdownlist>
+                    <span asp-validation-for="Type" class="text-danger fs-6"></span>
+                    
+                    <ejs-dropdownlist id="priority" placeholder="Priority" floatLabelType="Always" 
+                                      dataSource="@ViewBag.Priorities" ejs-for="Priority"></ejs-dropdownlist>
+                    <span asp-validation-for="Priority" class="text-danger fs-6"></span>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" asp-for="IsRecurring" id="isRecurring">
+                        <label class="form-check-label" for="isRecurring">
+                            Make this a recurring reminder
+                        </label>
+                    </div>
+                    
+                    <div id="recurrenceOptions" style="display: none;">
+                        <ejs-dropdownlist id="recurrenceType" placeholder="Recurrence Type" floatLabelType="Always" 
+                                          dataSource="@ViewBag.RecurrenceTypes" ejs-for="RecurrenceType"></ejs-dropdownlist>
+                        <span asp-validation-for="RecurrenceType" class="text-danger fs-6"></span>
+                    </div>
+                    
+                    <ejs-button id="submit" type="submit" cssClass="e-success"></ejs-button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="widget">
+            <div class="widget-title">
+                <h6>Common Reminders</h6>
+            </div>
+            <div class="widget-content">
+                <div class="list-group list-group-flush">
+                    <button type="button" class="list-group-item list-group-item-action" onclick="fillReminder('Close Cash ISA', 'Remember to close/renew your Cash ISA before the end of tax year', 'ISA')">
+                        <i class="fa-solid fa-piggy-bank me-2"></i>Close Cash ISA
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="fillReminder('Self Assessment Due', 'Submit your Self Assessment tax return', 'Tax')">
+                        <i class="fa-solid fa-file-invoice-dollar me-2"></i>Self Assessment Due
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="fillReminder('Insurance Renewal', 'Review and renew insurance policy', 'Insurance')">
+                        <i class="fa-solid fa-shield-halved me-2"></i>Insurance Renewal
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action" onclick="fillReminder('Investment Review', 'Review investment portfolio performance', 'Investment')">
+                        <i class="fa-solid fa-chart-line me-2"></i>Investment Review
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show/hide recurrence options based on checkbox
+    document.getElementById('isRecurring').addEventListener('change', function() {
+        const recurrenceOptions = document.getElementById('recurrenceOptions');
+        if (this.checked) {
+            recurrenceOptions.style.display = 'block';
+        } else {
+            recurrenceOptions.style.display = 'none';
+        }
+    });
+    
+    // Initialize recurrence options visibility
+    document.addEventListener('DOMContentLoaded', function() {
+        const isRecurringChecked = document.getElementById('isRecurring').checked;
+        const recurrenceOptions = document.getElementById('recurrenceOptions');
+        recurrenceOptions.style.display = isRecurringChecked ? 'block' : 'none';
+    });
+    
+    // Function to fill common reminders
+    function fillReminder(title, description, type) {
+        document.getElementById('title').ej2_instances[0].value = title;
+        document.getElementById('description').ej2_instances[0].value = description;
+        document.getElementById('type').ej2_instances[0].value = type;
+    }
+</script>
